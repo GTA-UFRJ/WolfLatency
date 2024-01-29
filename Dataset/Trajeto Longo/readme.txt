@@ -1,0 +1,1 @@
+O experimento foi realizado com o servidor posicionado estaticamente no bairro de Santa Cruz, enquanto o cliente dirigiu de Vila Isabel até Petrópolis e depois retornou.

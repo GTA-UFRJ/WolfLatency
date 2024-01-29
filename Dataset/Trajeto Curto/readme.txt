@@ -1,0 +1,1 @@
+O experimento foi realizado com o servidor posicionado estaticamente no laboratório do GTA. O cliente andou até o estacionamento e passou a andar de carro, dirigindo ao redor da Cidade Universitária e retornado novamento ao estacionamento, quando retornou a andar até o laboratório. 
