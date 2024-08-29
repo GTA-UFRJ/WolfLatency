@@ -13,7 +13,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Looper
-import android.provider.Settings.Global
 import android.telephony.CellIdentityNr
 import android.telephony.CellInfo
 import android.telephony.CellInfoCdma
@@ -22,6 +21,8 @@ import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellInfoWcdma
 import android.telephony.CellSignalStrengthNr
+import android.telephony.TelephonyCallback
+import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.Toast
@@ -68,7 +69,6 @@ import com.google.android.gms.location.LocationServices
 import com.opencsv.bean.CsvBindByName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.Call
@@ -94,6 +94,7 @@ class MainActivity : ComponentActivity() {
     private val latitudeState = mutableStateOf<Double?>(null)
     private val longitudeState = mutableStateOf<Double?>(null)
     private val urlState = mutableStateOf(TextFieldValue())
+    private val nsa = mutableStateOf(false)
     private val transportation = mutableStateOf(1)
     private val timeStampValue = mutableStateOf(" ")
     private val cellIdState = mutableStateOf<Any>(0)
@@ -108,6 +109,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        // Inicia a detecção de 5G
+        start5GDetection(this)
+
 
         setContent {
             val coroutineScope = rememberCoroutineScope()
@@ -214,20 +218,7 @@ class MainActivity : ComponentActivity() {
                                 .border(1.dp, Color.Black)
                         )
 
-                        // Input field for response size
-                        BasicTextField(
-                            value = sizeResponseState.value.toString(),
-                            onValueChange = {
-                                val size = it.toIntOrNull() ?: 0
-                                sizeResponseState.value = size
-                            },
-                            textStyle = TextStyle(color = Color.Black),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                                .background(color = Color.White)
-                                .border(1.dp, Color.Black)
-                        )
+
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Button to trigger the request
@@ -286,6 +277,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    override fun onDestroy() {
+        super.onDestroy()
+        // Para a detecção de 5G para evitar leaks
+        stop5GDetection(this)
     }
 
     private fun deleteCSVFile() {
@@ -343,7 +342,11 @@ class MainActivity : ComponentActivity() {
                                     cellIdentityLte.mncString?.let { data.add(it) }
                                     data.add(cellIdentityLte.ci)
                                     data.add(cellIdentityLte.tac)
-                                    data.add(6)
+                                    if (nsa.value) {
+                                        data.add(10)
+                                    } else {
+                                        data.add(6)
+                                    }
                                     data.add(cellInfo.cellSignalStrength.rsrq)
                                     data.add(cellInfo.cellSignalStrength.rssnr)
                                     return data
@@ -411,7 +414,56 @@ class MainActivity : ComponentActivity() {
         }
         return null
     }
+    private var telephonyCallback: TelephonyCallback? = null
 
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun start5GDetection(context: Context) {
+        if (telephonyCallback == null) {
+            val telephonyManager =
+                context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+
+            telephonyCallback =
+                object : TelephonyCallback(), TelephonyCallback.DisplayInfoListener {
+                    override fun onDisplayInfoChanged(displayInfo: TelephonyDisplayInfo) {
+                        when (displayInfo.overrideNetworkType) {
+                            TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA -> {
+                                // Conexão 5G NSA detectada
+                                Log.d("ATLAS", "Tipo de rede: NSA")
+                                on5GNSAConnectionDetected()
+
+                            }
+
+                            TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> {
+                                // Conexão 5G+ detectada (A implementar)
+                                Log.d("ATLAS", "Tipo de rede: PLUS")
+
+                            }
+
+                            else -> {
+                                // Não está conectado a uma rede 5G
+                                nsa.value = false
+                                Log.d("ATLAS", "Não conectado.")
+                            }
+                        }
+                    }
+                }
+            telephonyManager.registerTelephonyCallback(context.mainExecutor, telephonyCallback!!)
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun stop5GDetection(context: Context) {
+        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        telephonyCallback?.let {
+            telephonyManager.unregisterTelephonyCallback(it)
+        }
+        telephonyCallback = null
+    }
+
+    fun on5GNSAConnectionDetected(): MutableState<Boolean> {
+        // Coloque aqui o código que será executado quando a conexão 5G NSA for detectada
+        nsa.value = true
+        return nsa
+    }
 
     private fun saveDataToCSV(data: DataModel, dataCellId: MutableList<Any>) {
         val csvFileName = "clientdata.csv"
