@@ -22,6 +22,8 @@ import android.telephony.CellInfoLte
 import android.telephony.CellInfoNr
 import android.telephony.CellInfoWcdma
 import android.telephony.CellSignalStrengthNr
+import android.telephony.TelephonyCallback
+import android.telephony.TelephonyDisplayInfo
 import android.telephony.TelephonyManager
 import android.util.Log
 import android.widget.Toast
@@ -41,6 +43,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -102,12 +106,17 @@ class MyApplication : Application() {
 }
 
 class MainActivity : ComponentActivity() {
+
+    private val nsa = mutableStateOf(false)
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1000
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        start5GDetection(this)
+
 
         setContent {
             WolfServerTheme {
@@ -174,10 +183,13 @@ class MainActivity : ComponentActivity() {
         captureCellInfo(this@MainActivity)
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onDestroy() {
         super.onDestroy()
         // Unregister from EventBus when MainActivity is destroyed
         EventBus.getDefault().unregister(this)
+        // Para a detecção de 5G para evitar leaks
+        stop5GDetection(this)
     }
 
     @SuppressLint("SuspiciousIndentation")
@@ -234,7 +246,11 @@ class MainActivity : ComponentActivity() {
                                     cellIdentityLte.mncString?.let { data.add(it) }
                                     data.add(cellIdentityLte.ci)
                                     data.add(cellIdentityLte.tac)
-                                    data.add(6)
+                                    if (nsa.value) {
+                                        data.add(10)
+                                    } else {
+                                        data.add(6)
+                                    }
                                     data.add(cellInfo.cellSignalStrength.rsrq)
                                     data.add(cellInfo.cellSignalStrength.rssnr)
                                 }
@@ -314,6 +330,56 @@ class MainActivity : ComponentActivity() {
 
             )
         }
+    }
+    private var telephonyCallback: TelephonyCallback? = null
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun start5GDetection(context: Context) {
+        if (telephonyCallback == null) {
+            val telephonyManager =
+                context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+
+            telephonyCallback =
+                object : TelephonyCallback(), TelephonyCallback.DisplayInfoListener {
+                    override fun onDisplayInfoChanged(displayInfo: TelephonyDisplayInfo) {
+                        when (displayInfo.overrideNetworkType) {
+                            TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA -> {
+                                // Conexão 5G NSA detectada
+                                Log.d("ATLAS", "Tipo de rede: NSA")
+                                on5GNSAConnectionDetected()
+
+                            }
+
+                            TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> {
+                                // Conexão 5G+ detectada (A implementar)
+                                Log.d("ATLAS", "Tipo de rede: PLUS")
+
+                            }
+
+                            else -> {
+                                // Não está conectado a uma rede 5G
+                                nsa.value = false
+                                Log.d("ATLAS", "Não conectado.")
+                            }
+                        }
+                    }
+                }
+            telephonyManager.registerTelephonyCallback(context.mainExecutor, telephonyCallback!!)
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun stop5GDetection(context: Context) {
+        val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        telephonyCallback?.let {
+            telephonyManager.unregisterTelephonyCallback(it)
+        }
+        telephonyCallback = null
+    }
+
+    fun on5GNSAConnectionDetected(): MutableState<Boolean> {
+        // Coloque aqui o código que será executado quando a conexão 5G NSA for detectada
+        nsa.value = true
+        return nsa
     }
 
     private fun saveCellInfoToCSV(cellInfoData: List<Any>) {
