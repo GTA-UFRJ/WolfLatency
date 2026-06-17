@@ -1,0 +1,8 @@
+# JVM crash / heap dump artifacts
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
