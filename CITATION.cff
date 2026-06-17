@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use WolfLatency or its datasets, please cite the papers below."
+title: "WolfLatency"
+abstract: "Android client–server toolkit for measuring end-to-end network latency under mobility, correlated with GPS location and cellular (4G/5G) signal metadata."
+authors:
+  - family-names: Cristino
+    given-names: Luiz Felipe Cantanhede
+    affiliation: "GTA/COPPE, Universidade Federal do Rio de Janeiro (UFRJ)"
+  - family-names: "Cruz Caminha"
+    given-names: Pedro Henrique
+    affiliation: "GTA/COPPE, Universidade Federal do Rio de Janeiro (UFRJ)"
+repository-code: "https://github.com/GTA-UFRJ/WolfLatency"
+license: GPL-3.0
+preferred-citation:
+  type: conference-paper
+  title: "Vehicle Mobility Impact on Performance of Multi-Access Edge Computing"
+  year: 2024
+  url: "https://ieeexplore.ieee.org/document/10815763"
+  collection-title: "2024 IEEE 13th International Conference on Cloud Networking (CloudNet) — VehiClouds Workshop"
+  authors:
+    - family-names: Cristino
+      given-names: Luiz Felipe Cantanhede
+    - family-names: Cruz
+      given-names: Pedro Henrique
+    - family-names: Costa
+      given-names: "Luís Henrique M. K."
+references:
+  - type: conference-paper
+    title: "Caracterização da Latência de Borda sob Efeito de Mobilidade a Partir de Dados Reais"
+    year: 2024
+    url: "https://sol.sbc.org.br/index.php/wgrs/article/view/30091"
+    collection-title: "Anais do XXIX Workshop de Gerência e Operação de Redes e Serviços (WGRS 2024), SBC"
+    authors:
+      - family-names: Cristino
+        given-names: Luiz Felipe Cantanhede
+      - family-names: "Cruz Caminha"
+        given-names: Pedro Henrique
