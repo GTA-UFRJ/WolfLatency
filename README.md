@@ -12,8 +12,8 @@ WolfLatency was built at **GTA/COPPE/UFRJ** to study how **user mobility affects
 
 The system is a pair of Android apps that talk to each other over the **same cellular network**:
 
-- **WolfServer** — runs on one device and exposes an HTTP endpoint that echoes the client's requests.
-- **WolfClient** — runs on a second device, periodically sends HTTP requests (via OkHttp) to the server and measures the **round-trip latency** of each request. For every sample it simultaneously records:
+- **WolfServer** — runs on one (static) device and answers the client's HTTP GET with a small page; it also receives a follow-up POST and stores each sample as a backup.
+- **WolfClient** — runs on a second (moving) device, sends **one HTTP GET per second** (via OkHttp, over **IPv6** — IPv4 device-to-device traffic is blocked inside the carrier network) and measures the **round-trip time (RTT)** of each request. For every sample it simultaneously records:
   - **Geolocation** (GPS, via FusedLocationProvider);
   - **Cellular context** (serving cell, signal strength, RSRQ/RSSNR, MCC/MNC, NR-ARFCN) and **5G NSA/SA detection** through Android's `TelephonyManager`/`TelephonyCallback`.
 
@@ -26,11 +26,12 @@ Each row of `clientdata.csv` / `serverdata.csv`:
 | Field | Description |
 |---|---|
 | `Sequence` | Incremental sample id |
-| `Transport` | Transport/request type |
+| `Transport` | Mode of transport during capture (on foot / car / train) |
 | `Timestamp` | Capture time (`yyyy.MM.dd_HH.mm.ss`) |
 | `Latency` | Round-trip latency (ms) |
 | `Latitude`, `Longitude` | GPS position |
-| `Signal_dbm`, `Signal_level` | Serving-cell signal strength |
+| `Signal_dbm` | Received signal power in dBm (RSSI/RSCP/RSRP by technology) |
+| `Signal_level` | Signal bars, 0–4 |
 | `MCC`, `MNC` | Mobile country/network code |
 | `CellId`, `Tac/Lac` | Cell and tracking/location area id |
 | `Mobile_Network` | Radio technology (LTE/NR, …) |
